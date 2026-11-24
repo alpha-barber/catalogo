@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alpha Barber – Catálogo</title>
+<link rel="icon" href="favicon.png">
+<style>
+:root{--navy:#14367A;--red:#FF2330;--bg:#F4F6FA;--line:#DDE3EE;--text:#0E1B33;--muted:#5B6678}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--navy);color:#fff;border-bottom:5px solid var(--red)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:14px;padding:16px 0}
+.top img{width:72px;height:72px;border-radius:50%;background:#fff}
+.top h1{margin:0;font:900 26px/1.1 "Arial Black",Arial,sans-serif;letter-spacing:.5px}
+.top p{margin:3px 0 0;font-size:14px;opacity:.85}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+#q{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font:inherit}
+#q:focus,.chip:focus,.btn:focus{outline:3px solid var(--red);outline-offset:2px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px}
+.chip{flex:none;border:1.5px solid var(--line);background:#fff;color:var(--text);padding:7px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+.meta{display:flex;justify-content:space-between;gap:10px;padding-top:8px;font-size:14px;color:var(--muted)}
+.meta label{display:flex;align-items:center;gap:6px;cursor:pointer}
+main{padding:16px 0 90px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.card.off{opacity:.65}
+.ph{position:relative;aspect-ratio:1;background:#fff;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:contain}
+.ph img.ph0{width:45%;height:45%;opacity:.25}
+.tag{position:absolute;top:8px;left:8px;background:var(--red);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px}
+.info{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
+.info h2{margin:0;font-size:14.5px;line-height:1.3}
+.cod{font-size:12px;color:var(--muted)}
+.price{margin-top:auto;padding-top:6px;font:900 19px/1 "Arial Black",Arial,sans-serif;color:var(--navy)}
+.price small{font:600 13px system-ui,sans-serif;color:var(--muted)}
+.btn{display:block;text-align:center;margin-top:8px;padding:10px;border-radius:9px;background:var(--red);color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+.btn[aria-disabled=true]{background:var(--line);color:var(--muted);pointer-events:none}
+.msg{text-align:center;color:var(--muted);padding:48px 12px}
+.msg a{color:var(--navy);font-weight:700}
+.wa{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#25D366;color:#fff;text-decoration:none;font-weight:700;padding:13px 18px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+@media(min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}}
+</style>
+</head>
+<body>
+<header><div class="wrap top"><img src="logo.png" alt="Alpha Barber"><div><h1>ALPHA BARBER</h1><p>Catálogo de produtos para barbearia</p></div></div></header>
+<div class="bar"><div class="wrap">
+<input id="q" type="search" placeholder="Buscar produto ou código" aria-label="Buscar">
+<div class="chips" id="chips"></div>
+<div class="meta"><span id="count"></span><label><input type="checkbox" id="hide"> Ocultar esgotados</label></div>
+</div></div>
+<main class="wrap"><div class="grid" id="grid"></div><div class="msg" id="msg">Carregando catálogo…</div></main>
+<a class="wa" id="wa" target="_blank" rel="noopener">Falar no WhatsApp</a>
+<script>
+// ===== CONFIGURAÇÃO =====
+var WHATS="5519991974791"; // DDI + DDD + número, só dígitos
+var SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQFHA-lWmb0waqdghKBPX7hg-MfbPBUnuZpqU3g4zgrDLuQqk2kqjwqlwoxw6N8lr3LdEc3eF_FuKUm/pub?gid=963602923&single=true&output=csv";
+var CATMAP={"MÁQUINAS":"Máquinas","TESOURAS/NAVALHETES":"Tesouras e navalhetes","ESCOVAS - PENTES - PRESILHAS":"Escovas, pentes e presilhas","COSMÉTICOS":"Cosméticos","ACESSÓRIOS":"Acessórios","ESPANADORES E BORRIFADORES":"Espanadores e borrifadores","LÂMINAS E DESCARTÁVEIS":"Lâminas e descartáveis","CAPAS E AVENTAIS":"Capas e aventais"};
+// ========================
+var P=[],st={q:"",cat:"Todos",hide:false};
+var $=function(i){return document.getElementById(i)};
+var norm=function(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+var wa=function(t){return "https://wa.me/"+WHATS+"?text="+encodeURIComponent(t)};
+$("wa").href=wa("Olá! Vim pelo catálogo da Alpha Barber.");
+
+function parseCSV(t){var rows=[],row=[],f="",q=false;
+ for(var i=0;i<t.length;i++){var c=t[i];
+  if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c=='"')q=true;else if(c==","){row.push(f);f=""}
+  else if(c=="\n"||c=="\r"){if(c=="\r"&&t[i+1]=="\n")i++;row.push(f);f="";rows.push(row);row=[]}
+  else f+=c}
+ if(f!==""||row.length){row.push(f);rows.push(row)}return rows}
+function num(s){s=String(s||"").replace(/[^0-9,.]/g,"");if(!s)return null;
+ if(s.indexOf(",")>-1)s=s.replace(/\./g,"").replace(",",".");var n=parseFloat(s);return isNaN(n)?null:n}
+function fromSheet(text){var rows=parseCSV(text);if(rows.length<2)return null;
+ var h=rows[0].map(norm),ix=function(){for(var a=0;a<arguments.length;a++)for(var k=0;k<h.length;k++)if(h[k]===arguments[a]||h[k].indexOf(arguments[a])===0)return k;return -1};
+ var iF=ix("arquivo da foto","foto"),iC=ix("codigo"),iN=ix("produto","nome"),iK=ix("categoria"),iP=ix("preco"),iS=ix("status");
+ if(iN<0)return null;var out=[];
+ rows.slice(1).forEach(function(r){var n=(r[iN]||"").trim();if(!n)return;
+  var f=iF>-1?(r[iF]||"").trim():"";if(f&&!/^https?:/i.test(f)&&f.indexOf("fotos/")!==0)f="fotos/"+f;
+  var k=iK>-1?(r[iK]||"").trim():"";
+  out.push({c:iC>-1?(r[iC]||"").trim():"",n:n,k:CATMAP[k]||k,p:iP>-1?num(r[iP]):null,e:iS>-1&&norm(r[iS]).indexOf("esgot")>-1,i:f})});
+ return out.length?out:null}
+
+function draw(){
+ var cats=["Todos"];P.forEach(function(p){if(p.k&&cats.indexOf(p.k)<0)cats.push(p.k)});
+ if(cats.indexOf(st.cat)<0)st.cat="Todos";
+ $("chips").innerHTML=cats.map(function(c){return '<button class="chip" type="button" aria-pressed="'+(c===st.cat)+'" data-c="'+esc(c)+'">'+esc(c)+'</button>'}).join("");
+ show()}
+function show(){
+ var q=norm(st.q);
+ var L=P.filter(function(p){return(st.cat==="Todos"||p.k===st.cat)&&(!st.hide||!p.e)&&(!q||norm(p.n+" "+p.c).indexOf(q)>-1)});
+ $("count").textContent=L.length+" produto"+(L.length===1?"":"s");
+ $("msg").textContent=L.length?"":"Nenhum produto encontrado.";
+ $("grid").innerHTML=L.map(function(p,j){
+  var price=p.p!=null?'R$ '+p.p.toLocaleString("pt-BR",{minimumFractionDigits:2}):'<small>Consulte o valor</small>';
+  var img=p.i?'<img src="'+esc(p.i)+'" alt="'+esc(p.n)+'" loading="lazy" onerror="this.onerror=null;this.src=\'logo.png\';this.className=\'ph0\'">':'<img class="ph0" src="logo.png" alt="">';
+  var btn=p.e?'<a class="btn" aria-disabled="true">Esgotado</a>':'<a class="btn" target="_blank" rel="noopener" href="'+wa("Olá! Quero pedir: "+p.n+(p.c?" (cód. "+p.c+")":"")+(p.p!=null?" – R$ "+p.p.toLocaleString("pt-BR",{minimumFractionDigits:2}):""))+'">Pedir no WhatsApp</a>';
+  return '<article class="card'+(p.e?' off':'')+'"><div class="ph">'+img+(p.e?'<span class="tag">ESGOTADO</span>':'')+'</div><div class="info"><h2>'+esc(p.n)+'</h2>'+(p.c?'<span class="cod">Cód. '+esc(p.c)+'</span>':'')+'<div class="price">'+price+'</div>'+btn+'</div></article>'}).join("")}
+
+$("chips").addEventListener("click",function(e){var b=e.target.closest(".chip");if(!b)return;st.cat=b.dataset.c;draw()});
+$("q").addEventListener("input",function(e){st.q=e.target.value;show()});
+$("hide").addEventListener("change",function(e){st.hide=e.target.checked;show()});
+
+function fail(){$("msg").innerHTML='Não foi possível carregar o catálogo agora. <a href="'+wa("Olá! Gostaria de ver o catálogo.")+'">Fale conosco no WhatsApp</a>.'}
+function backup(){fetch("produtos.json").then(function(r){return r.json()}).then(function(d){P=d;draw()}).catch(fail)}
+fetch(SHEET_URL+"&t="+Date.now()).then(function(r){if(!r.ok)throw 0;return r.text()})
+ .then(function(t){var d=fromSheet(t);if(!d)throw 0;P=d;draw()}).catch(backup);
+</script>
+</body>
+</html>

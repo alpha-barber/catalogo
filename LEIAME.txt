@@ -1,0 +1,8 @@
+CATÁLOGO ALPHA BARBER (simples)
+
+Arquivos: index.html (site), logo.png, favicon.png, produtos.json (cópia de segurança), pasta fotos/.
+O site lê os produtos da planilha publicada no Google Sheets; se a planilha falhar, usa o produtos.json.
+
+Trocar WhatsApp / link da planilha: abra index.html e edite as linhas WHATS e SHEET_URL (bloco CONFIGURAÇÃO).
+Planilha: colunas Código, Produto, Categoria, Preço, Status ("Esgotado" marca como esgotado) e Arquivo da foto (ex.: fotos/pag004.jpg).
+Foto nova: coloque o arquivo na pasta fotos/ e escreva o nome na coluna. Produto sem foto mostra a logo.
